@@ -27,11 +27,12 @@ class GainCalculations:
         #sensing duration [s] . For how much time will the node sense the spectrum
         sensing_duration = 2
         
-        #We want to measure noise power, for that it is really important that we have no signal generated
+        #We want to measure the noise power, for that it is really important that we have no signal generated
         #first configure rx_node
         rx_node.setSenseConfiguration(freq_measurement, freq_measurement, 400e3)
         #start sensing
         try:
+            print "Sense Starting..."
             rx_node.senseStart(time.time(), sensing_duration, 5)
         except Exception:
             print "Error"
@@ -47,6 +48,7 @@ class GainCalculations:
         #now we have to generate a signal and measure the received power
         #configure and start signal generation
         tx_node.setGeneratorConfiguration(freq_measurement, p_tx_measurement)
+        print "Generation starting..."
         tx_node.generatorStart(time.time(), transmitting_duration)
         
         #get current time
@@ -54,6 +56,7 @@ class GainCalculations:
         
         #sense the spectrum
         try:
+            print "Sense starting..."
             rx_node.senseStart(time.time(), sensing_duration, 5)
         except Exception:
             print "Error"
@@ -100,7 +103,7 @@ class GainCalculations:
        
     @staticmethod
     def getAverageGain(coordinator_id ,tx_node_id, rx_node_id):
-        #read from file (if it exists) and average all values from file
+        #read from file (if it exists) and average all values from the file
         
         #first, check if the file exists
         path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id)
@@ -260,18 +263,7 @@ class GainCalculations:
         #Plot.plot_list(gain_list[0], "Gain between: tx%d and rx%d" %(tx_node_id, rx_node_id), False)
         
 def main():
-    k = 10
-    print GainCalculations.getAverageGain(10001, 2, 25)
-    print GainCalculations.getAverageGain(10001, 17, 16)
-    GainCalculations.plotGains(10001, 2, 25)
-    GainCalculations.plotGains(10001, 17, 16)
-    GainCalculations.plotGains(10001, 2, 16)
-    GainCalculations.plotGains(10001, 17, 25)
-    while k>50:
-        GainCalculations.calculateInstantGain(10001, 2, 25)
-        GainCalculations.calculateInstantGain(10001, 17, 16)
-        GainCalculations.calculateInstantGain(10001, 2, 16)
-        GainCalculations.calculateInstantGain(10001, 17, 25)
-        time.sleep(30)
-        k-=1
+    print GainCalculations.getAverageGain(coordinator_id,tx_node_id,rx_node_id)
+    GainCalculations.plotGains(coordinator_id,tx_node_id,rx_node_id)
+    GainCalculations.calculateInstantGain(coordinator_id,tx_node_id,rx_node_id)
 #main()
