@@ -12,7 +12,7 @@ import datetime
 class GainCalculations:
     
     @staticmethod
-    def calculateInstantGain(coordinator_id,tx_node_id, rx_node_id):
+    def calculateInstantGain(coordinator_id,tx_node_id, rx_node_id, freq_measurement):
         #define two Node objects
         tx_node = Node(coordinator_id, tx_node_id)
         rx_node = Node(coordinator_id, rx_node_id)
@@ -27,14 +27,14 @@ class GainCalculations:
         #sensing duration [s] . For how much time will the node sense the spectrum
         sensing_duration = 2
         
-        #We want to measure noise power, for that it is really important that we have no signal generated
-        #first configure rx_node
-        rx_node.setSenseConfiguration(freq_measurement, freq_measurement, 400e3)
-        #start sensing
+        #now measure the noise power, for that it is really important that we have no signal generated
         try:
-            rx_node.senseStart(time.time(), sensing_duration, 5)
+            #configure rx_node
+            rx_node.setSenseConfiguration(freq_measurement, freq_measurement, 400e3)
+            #start sensing
+            rx_node.senseStart(time.time()+1, sensing_duration, 5)
         except Exception:
-            print "Error"
+            print "Calculate gain between %d and %d : Noise measurement error, return" %(tx_node_id, rx_node_id) 
             return
         
         #plot data just to see what is happening
@@ -46,21 +46,25 @@ class GainCalculations:
         
         #now we have to generate a signal and measure the received power
         #configure and start signal generation
-        tx_node.setGeneratorConfiguration(freq_measurement, p_tx_measurement)
-        tx_node.generatorStart(time.time(), transmitting_duration)
+        try:
+            tx_node.setGeneratorConfiguration(freq_measurement, p_tx_measurement)
+            tx_node.generatorStart(time.time(), transmitting_duration)
+        except:
+            print "Calculate gain between %d and %d :  Error at generator." %(tx_node_id, rx_node_id) 
+            return
         
         #get current time
         start_gen_time = time.time()
         
         #sense the spectrum
         try:
-            rx_node.senseStart(time.time(), sensing_duration, 5)
+            rx_node.senseStart(time.time()+1, sensing_duration, 5)
         except Exception:
-            print "Error"
+            print "Calculate gain between %d and %d : Receive power measurement error, return" %(tx_node_id, rx_node_id) 
             return
         
         #plot data just to see what is happening
-        #Plot.plotResultsFromFile("./data/coor_%d/node_%d.dat" %(coordinator_id,rx_node.node_id), 0.0001)
+        #Plot.plotResultsFromFile("./data/node_%d.dat" %(rx_node.node_id), 0.0001)
         
         #now we have in file data with the measurements
         received_power = GainCalculations.getAverageDataMeasurmentsFromFile(coordinator_id,rx_node.node_id)[1][0]
@@ -69,7 +73,10 @@ class GainCalculations:
         
         #calculate gain
         gain = (received_power - noise_power) / (math.pow(10, p_tx_measurement/10.00) * 0.001)
-        print "Gain between node %d and node %d: %.9f" %(tx_node.node_id, rx_node.node_id, gain)
+        if gain<0:
+            print "Calculate gain between %d and %d : Bad measurement, noise power is bigger than received_power, omit this measurement" %(tx_node_id, rx_node_id) 
+            return
+        print "Gain between node %d and node %d: %.9f e-6  ( %.6f db)" %(tx_node.node_id, rx_node.node_id, gain *1e6, 10*math.log10(gain))
         
         #write this gain in a file
         results_list = [gain, received_power, noise_power, math.pow(10, p_tx_measurement/10.00) * 0.001, datetime.datetime.now()]
@@ -79,7 +86,7 @@ class GainCalculations:
         print "Time passed: %f" %(time.time() - start_gen_time)
         if (time.time() - start_gen_time < transmitting_duration):
             #that means we have to wait
-            print "Sleep for %f" %(math.ceil(transmitting_duration - (time.time() - start_gen_time)))
+            print "Sleep for %f until signal generation stops" %(math.ceil(transmitting_duration - (time.time() - start_gen_time)))
             time.sleep(math.ceil(transmitting_duration - (time.time() - start_gen_time)))
         
         return gain
@@ -105,16 +112,22 @@ class GainCalculations:
         #first, check if the file exists
         path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id)
         if not os.path.isfile(path) and not os.path.exists(path):
-            print "There is no average values available for this combination"
-            return
+            print "There is no average values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat" %(rx_node_id, tx_node_id)
+            path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,rx_node_id, tx_node_id)
+            if not os.path.isfile(path) and not os.path.exists(path):
+                print "There is no average values available for this combination."
+                return
+        
         
         f = open(path, "r")
         
         #read first line, it's a header
         f.readline()
         
+        #initialize sum with 0
         s = 0.00
         
+        #k will represent the number of values 
         k = 0
         while True:
             line = f.readline()
@@ -143,42 +156,49 @@ class GainCalculations:
         #read first line, it's a header
         f.readline()
         
-        # a list average_data: [[frequency], [average_power for that frequency]]. It will contain average power for one frequency
-        average_data = [[],[]]
+        #data_list [[frequency]  ,[ [ list of all powers for that frequency]  ]]
+        #an example of data_list:  [[freq1, freq2] , [[p1, p2, p3], [p1, p2] ]]
+        data_list = [[], []]
         
         #read the entire file
         while True:
+            #read current line. It's a string at this step
             line = f.readline()
             if not line:
                 break
             
-            #line structure: [time, frequency_hz, power_dbm]
+            #line structure: "time   frequency_hz   power_dbm"
             #split line string (contains several numbers)
             line_list = line.split()
+            #at this step, line_split is something like that: ['123',  '2340e6' , '-90']
+            
             #convert data_list elements to float
             line_list = GainCalculations.convertListElementsToFloat(line_list)
+            #now , line_List : [123,  2340e6, -90]
             
             try:
-                #must see if this frequency exists in average_data
-                if float(line_list[1]) not in average_data[0]:
-                    #this frequency wasn't added in data_list yet 
-                    average_data[0].append(float(line_list[1]))
-                    #average_data must contain linear power
-                    average_data[1].append(math.pow(10,float(line_list[2])/10.00) * 0.001)
+                #check if this frequency was added in data_list
+                if line_list[1] not in data_list[0]:
+                    #then, we have a new frequency which has to be added in data_list
+                    data_list[0].append(float(line_list[1]))
+                    data_list[1].append([ math.pow(10.00, float(line_list[2])/10.00)*1e-3 ])
                 else:
-                    #this frequency was already added in data_list
-                    #do the average
-                    #get the index in average_data for that frequency
-                    index = average_data[0].index(float(line_list[1]))
-                    average_data[1][index] = (average_data[1][index] + math.pow(10,float(line_list[2])/10.00) *0.001) / 2.00
-            except Exception:
-                #print Exception.message
-                #may be a white line
-                pass
-        
+                    #this frequency was added in data_list
+                    #get index for that that frequency
+                    index = data_list[0].index(float(line_list[1]))
+                    data_list[1][index].append(math.pow(10.00, float(line_list[2])/10.00)*1e-3)
+            except:
+                continue
+                
         #close the file
         f.close()
         
+        # a list average_data: [[frequency], [average_power for that frequency]]. It will contain average power for one frequency
+        average_data = [[],[]]
+        for i in range(0, len(data_list[0])):
+            average_data[0].append(data_list[0][i])
+            average_data[1].append( math.fsum(data_list[1][i])/len(data_list[1][i]))
+            
         return average_data
     
     @staticmethod
@@ -224,9 +244,9 @@ class GainCalculations:
         #first, check if the file exists
         path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id)
         if not os.path.isfile(path) and not os.path.exists(path):
-            print "There is no average values available for this combination"
+            print "There is no measurement values available for this combination"
             return
-        
+   
         print "Plot gains"
         f = open("./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id), "r")
         
@@ -249,29 +269,22 @@ class GainCalculations:
             
             #append gain and date to gain_list
             try:
-                                                                    #2013-07-22 10:10:54.466393        
-                gain_list[0].append(float(line_list[0]))
+                #2013-07-22 10:10:54.466393
+                #in file gains are in linear value, it more comfortable to display in logarithmic scale        
+                gain_list[0].append(10 * math.log10(float(line_list[0])))
                 gain_list[1].append(DateTime.strptime(  (line_list[4] + " " + line_list[5])[0:16], "%Y-%m-%d %H:%M"  ))
             except Exception:
                 continue
             
         #plot results
-        Plot.plot_x_y_date_lists(gain_list[1], gain_list[0], "Time", "Gain", "Gain between: tx%d and rx%d" %(tx_node_id, rx_node_id), False)
+        Plot.plot_x_y_date_lists(gain_list[1], gain_list[0], "Time", "Gain [dB]", "Gain between: tx%d and rx%d" %(tx_node_id, rx_node_id), False)
         #Plot.plot_list(gain_list[0], "Gain between: tx%d and rx%d" %(tx_node_id, rx_node_id), False)
+    
+    @staticmethod
+    def plotAllGainsWithinCoordinator(coordinator_id):
+        path = "gain measurements/coor_%d" %coordinator_id
         
-def main():
-    k = 10
-    print GainCalculations.getAverageGain(10001, 2, 25)
-    print GainCalculations.getAverageGain(10001, 17, 16)
-    GainCalculations.plotGains(10001, 2, 25)
-    GainCalculations.plotGains(10001, 17, 16)
-    GainCalculations.plotGains(10001, 2, 16)
-    GainCalculations.plotGains(10001, 17, 25)
-    while k>50:
-        GainCalculations.calculateInstantGain(10001, 2, 25)
-        GainCalculations.calculateInstantGain(10001, 17, 16)
-        GainCalculations.calculateInstantGain(10001, 2, 16)
-        GainCalculations.calculateInstantGain(10001, 17, 25)
-        time.sleep(30)
-        k-=1
-#main()
+        for i in os.listdir(path):
+            tx_node_id = i[ (i.index("tx_") +3) : (i.index("_and"))]
+            rx_node_id = i[ (i.index("rx_") +3):  (i.index(".dat"))]
+            GainCalculations.plotGains(coordinator_id, int(tx_node_id), int(rx_node_id))
