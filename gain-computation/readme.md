@@ -12,6 +12,21 @@ Before using this package, please install VESNA ALH Tools and Python bindings fo
 (see its own README file for installation instructions - Tomaz Solc)
 * https://github.com/sensorlab/vesna-spectrum-sensor
 
+This package contains the following .py files:
+* **1) node.py**
+* used to configure the nodes (transmitter or receiver), generate a signal and sense the spectrum
+* used to check the functionality of the nodes
+* **2) gainCalculations.py**
+* used for measuring the channel gain between two VESNA nodes
+* **3) kalmanImplementation.py**
+* uses the PyKalman module
+* used for predicting the channel gain
+* **4) myQueue.py**
+* used for forming a queue with a given size
+* used as a history of channel gain measurements for the Kalman predictor
+* **5) plot.py**
+* used for plotting the channel gains
+
 
 Methodology for measuring the gain between two nodes
 ====================================================
