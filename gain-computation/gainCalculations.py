@@ -1,96 +1,135 @@
 from node import Node
 from plot import Plot
 from datetime import datetime as DateTime
-
+from my_queue import MyQueue
+import kalmanImplementation
 import time
 import math
 import os
 import datetime
 
-
-
 class GainCalculations:
-    #contains several static methods which can be used for gain measurement between vesna nodes
+    #contains several static methods which can be used for channel gain measurement between the VESNA nodes
+    #you can either already use the long term measurements stored in .dat files or perform new channel gain measurements
     
     @staticmethod
-    def calculateInstantGain(coordinator_id,tx_node_id, rx_node_id, freq_measurement):
+    def calculateInstantGain(coordinator_id,tx_node_id, rx_node_id, measuring_freq = 2420e6, saveresults = True , transmitting_duration = 12):
+        #this method measures the instant channel gain between tx_node_id and rx_node_id within the coordinator_id
+        #calculate gain as the following: Gain_between_i_and_j = (Power received by j - Power noise)/(Power transmitted by i)
+        #you can specify the frequency where you want to measure the channel gain
+        #you can save the results (append) in a file or you can just get the instant gain without saving the results
+        #you can specify transmitting_duration for the generator. Taking into account the programming times I recommend using at least 6 seconds
+        
         #define two Node objects
         tx_node = Node(coordinator_id, tx_node_id)
         rx_node = Node(coordinator_id, rx_node_id)
         
         #a few measurement parameters
-        #frequency measurement [hz]
-        freq_measurement = 2420e6
         #transmitting power for measurement [dBm]
-        p_tx_measurement = 0
-        #transmitting duration [s]. For how much time will the generator generate a signal
-        transmitting_duration = 12
-        #sensing duration [s] . For how much time will the node sense the spectrum
+        p_tx_dBm = 0
+        
+        #transmitting duration [s]. For how much time will the generator generate a signal. This is given in the method parameters.
+        
+        #sensing duration [s]. For how long will the node sense the spectrum
         sensing_duration = 2
         
-        #First We want to measure noise power, for that it is really important that we have no signal generated
-        try:
-            #configure rx_node
-            rx_node.setSenseConfiguration(freq_measurement, freq_measurement, 400e3)
-            #start sensing
-            rx_node.senseStart(time.time()+1, sensing_duration, 5)
-        except Exception:
-            print "Calculate gain between %d and %d : Noise measurement error, return" %(tx_node_id, rx_node_id) 
-            return
+        #when to start the sensing (after 1-2 seconds)
+        time_after = 2
         
-        #now we have the measured results in a file, we have to read the file and do the average
-        #data returned has the following structure: [[frequency], [average power in Watts for that frequency]]. Normally there is only one frequency
-        noise_power = GainCalculations.getAverageDataMeasurmentsFromFile(coordinator_id ,rx_node.node_id)[1][0]
+        #First we want to measure noise power, for that it is important that we have no signal generated
+        attempts = 0
+        while True:
+            try:
+                #configure rx_node
+                rx_node.setSenseConfiguration(measuring_freq, measuring_freq, 400e3)
+                #start sensing
+                rx_node.senseStart(time.time()+time_after, sensing_duration, 5)
+                #Observation: Computer clock is not synchronized with the node clock. This is a reason why we choose to start the sensing only after a few seconds, otherwise there are cases when the node will report that "Start time cannot be in the pass"
+                
+                #if everything is fine, break this loop
+                break
+            except:
+                if attempts<3:
+                    attempts+=1
+                    print "Calculate gain between %d and %d: Noise measurement error, retry %d" %(tx_node_id, rx_node_id, attempts) 
+                    continue
+                else:
+                    print "Calculate gain between %d and %d: Noise measurement error, return nothing" %(tx_node_id, rx_node_id) 
+                    return
+                    
+        #now we have the measured results in a .dat file, we have to read the file and do the average.
+        #data returned has the following structure: [[frequency], [average power in W for that frequency]]. Normally there is only one frequency because we commanded the nodes to sense and generate signal only on a single channel
+        noise_power = GainCalculations.getAverageDataMeasurementsFromFile(coordinator_id ,rx_node.node_id)[1][0]
         
         #now we have to generate a signal and measure the received power
         #configure and start signal generation
         try:
-            tx_node.setGeneratorConfiguration(freq_measurement, p_tx_measurement)
+            tx_node.setGeneratorConfiguration(measuring_freq, p_tx_dBm)
             tx_node.generatorStart(time.time(), transmitting_duration)
         except:
             print "Calculate gain between %d and %d :  Error at generator. Return" %(tx_node_id, rx_node_id) 
             return
         
-        #get current time
+        #get current time. I want to know when I started the signal generation
         start_gen_time = time.time()
-        
+        #wait a second just to be sure that receiver catch the signal generated. (With this we take into account other delays that can appear in the testbed)
+        time.sleep(1)
         #sense the spectrum
-        try:
-            rx_node.senseStart(time.time()+1, sensing_duration, 5)
-        except Exception:
-            print "Calculate gain between %d and %d : Receive power measurement error, return" %(tx_node_id, rx_node_id) 
-            #anyway, at this point there is a signal generated, so I don't want to affect other measurements, so we have to wait until signal generation stops
-            GainCalculations.sleepUntilSignalGenerationStops(start_gen_time, transmitting_duration)
-            return
+        attempts =0
+        while True:
+            try:
+                #start sense after time_after seconds from now
+                rx_node.senseStart(time.time()+time_after, sensing_duration, 5)
+               
+                #if everything is fine, break this loop               
+                break
+            except Exception:
+                #try a few more times if something went wrong
+                if attempts < 2:
+                    attempts += 1
+                    print "Calculate gain between %d and %d : Receive power measurement error, retry %d" %(tx_node_id, rx_node_id, attempts) 
+                    continue
+                else:
+                    print "Calculate gain between %d and %d : Receive power measurement error, return nothing" %(tx_node_id, rx_node_id)
+                    #anyway, at this point there is a signal generated. I don't want to affect other measurements. We have to wait until signal generation stops
+                    GainCalculations.sleepUntilSignalGenerationStops(start_gen_time, transmitting_duration)
+                    return
         
-        #now we have in file data with the measurements. Average data from the file: [[frequencies], [average power in watts for a specific frequency]]
-        received_power = GainCalculations.getAverageDataMeasurmentsFromFile(coordinator_id,rx_node.node_id)[1][0]
+        #now we have in the file data with the measurements. Average data from the file: [[frequencies], [average power in W for a specific frequency]]
+        received_power = GainCalculations.getAverageDataMeasurementsFromFile(coordinator_id,rx_node.node_id)[1][0]
         
-        print "Noise power: %.6f pW      Received power: %.6f pW" %(noise_power*1e12, received_power*1e12)
+        print "Gain calculation between tx_%d and rx_%d : Noise power: %.6fE-12      Received power: %.6fE-12" %(tx_node_id, rx_node_id,noise_power*1e12, received_power*1e12)
         
         #calculate gain
-        gain = (received_power - noise_power) / (math.pow(10, p_tx_measurement/10.00) * 0.001)
+        gain = (received_power - noise_power) / (math.pow(10.00, p_tx_dBm/10.00) * 0.001)
         if gain<0:
-            print "Calculate gain between %d and %d : Bad measurement, noise power is bigger than received_power, omit this measurement" %(tx_node_id, rx_node_id) 
+            #in this case, something went wrong, no signal was generated
+            print "Calculate gain between %d and %d : Bad measurement, noise power is bigger than the received_power, omit this measurement" %(tx_node_id, rx_node_id) 
             #wait for the signal generation stops
             GainCalculations.sleepUntilSignalGenerationStops(start_gen_time, transmitting_duration)
-            return
+            return None
         
-        print "Gain between node %d and node %d: %.9f e-6  ( %.6f db)" %(tx_node.node_id, rx_node.node_id, gain *1e6, 10*math.log10(gain))
+        print "Gain between node %d and node %d: %.9fE-6  ( %.6f dB)" %(tx_node.node_id, rx_node.node_id, gain *1e6, 10.00*math.log10(gain))
         
-        #write this gain in a file
-        results_list = [gain, received_power, noise_power, math.pow(10, p_tx_measurement/10.00) * 0.001, datetime.datetime.now()]
-        GainCalculations.printResultsInAFile(results_list, coordinator_id ,tx_node.node_id, rx_node.node_id)
+        #write this gain in a file if it was measured correctly
+        results_list = [gain, received_power, noise_power, math.pow(10, p_tx_dBm/10.00) * 0.001, datetime.datetime.now()]
+        
+        #save results
+        if(saveresults):
+            GainCalculations.printResultsInAFile(results_list, coordinator_id ,tx_node.node_id, rx_node.node_id)
         
         #wait until signal generation stops
         GainCalculations.sleepUntilSignalGenerationStops(start_gen_time, transmitting_duration)
         
+        #return gain
         return gain
     
     @staticmethod 
     def sleepUntilSignalGenerationStops(start_gen_time, transmitting_duration):
+        #use this just when you have generated a signal and you want to wait until the generated signal stops.
+        #generally this method is used by other methods inside this class
         print "Time passed: %f" %(time.time() - start_gen_time)
-        if (time.time() - start_gen_time < transmitting_duration):
+        if ( (time.time() - start_gen_time) < transmitting_duration):
             #that means we have to wait
             print "Sleep for %f until signal generation stops" %(math.ceil(transmitting_duration - (time.time() - start_gen_time)))
             time.sleep(math.ceil(transmitting_duration - (time.time() - start_gen_time)))
@@ -98,6 +137,7 @@ class GainCalculations:
     
     @staticmethod    
     def convertListElementsToFloat(list_to_be_converted):
+        #use this when you have a list with string numbers and you want to convert the list elements to float numbers.
         #return list_to_be_converted with float elements
         #conversion can generate exceptions
         try:
@@ -110,139 +150,329 @@ class GainCalculations:
             return None
         
     @staticmethod
-    def getMinMaxGain(coordinator_id, tx_node_id, rx_node_id):
-        #read from file (if it exists) and return the maximum gain
+    def getFileResults(coordinator_id, tx_node_id, rx_node_id, year=None, month=None, day=None):
+        #reads the file which contains the saved measurements. Reads only the gains measurements made until the specified date. If no date is specified, then all available gains will be returned         
         
         #first, check if the file exists
         path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id)
         
-        if not os.path.isfile(path) and not os.path.exists(path):
-            print "There is values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat" %(rx_node_id, tx_node_id)
-            path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,rx_node_id, tx_node_id)
-            if not os.path.isfile(path) and not os.path.exists(path):
-                print "There is no values available for this combination."
-                return
-        
+        if not os.path.isfile(path) or not os.path.exists(path):
+            return None
+            
         f = open(path, "r")
         
         #read first line, it's a header
         f.readline()
         
-        #line list: [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ]
-        line  = f.readline()
-        line_list = line.split()
-        max = float(line_list[0])
-        min = float(line_list[0])
+        #gains will have the following form : [ [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], .. ]
+        gains = []
         
         while True:
             line = f.readline()
             if not line:
+                #end of file
                 break
             
             line_list = line.split()
-            if (float(line_list[0]) > max):
-                max = float(line_list[0])
+            
+            try:
+                #check the date
+                date = DateTime.strptime((line_list[4] + " " + line_list[5])[0:16], "%Y-%m-%d %H:%M")
+                if (year!=None and month != None and day!=None):
+                    if date.year > year:
+                        break
+                    if date.year == year and date.month>month:
+                        break
+                    if date.year == year and date.month == month and date.day > day:
+                        break
                 
-            if (float(line_list[0]) < min):
-                min = float(line_list[0])
-                
-        return [min, max]
+                gains.append([float(line_list[0]), float(line_list[1]), float(line_list[2]), float(line_list[3]), line_list[4] + " " +line_list[5]])
+            except:
+                continue
+        f.close()
+        
+        #The file might exits, but you may not have results until the specified date
+        if len(gains) ==0:
+            print "The date is invalid (no measurements for the specified date), the file exists, but it is empty"
+            return None
+        
+        return gains
     
     @staticmethod
-    def getMinMaxNoise(coordinator_id, tx_node_id, rx_node_id):
-        #read from file (if it exists) and return the maximum gain
+    def getMinMaxGain(coordinator_id, tx_node_id, rx_node_id, year=None, month=None, day=None):
+        #read from file (if it exists) and return the minimum and maximum channel gain
+        #specify year, month, day if you only want to take into account gain measurements made until that date. If those are not specified, then all measurements will be taken into account.
         
-        #first, check if the file exists
-        path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id)
+        #first get data from the file
+        gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+        #gains will have the following form : [ [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], .. ]
         
-        if not os.path.isfile(path) and not os.path.exists(path):
-            print "There is values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat" %(rx_node_id, tx_node_id)
-            path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,rx_node_id, tx_node_id)
-            if not os.path.isfile(path) and not os.path.exists(path):
-                print "There is no values available for this combination."
-                return
-        
-        f = open(path, "r")
-        
-        #read first line, it's a header
-        f.readline()
-        
-        #line list: [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ]
-        line  = f.readline()
-        line_list = line.split()
-        max = float(line_list[2])
-        min = float(line_list[2])
-        
-        while True:
-            line = f.readline()
-            if not line:
-                break
+        if gains is None:
+            aux = tx_node_id
+            tx_node_id = rx_node_id
+            rx_node_id = aux
+            print "There are no values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat? (yes or no)" %(tx_node_id, rx_node_id)
+            choice = raw_input("")
             
-            line_list = line.split()
-            if (float(line_list[2]) > max):
-                max = float(line_list[2])
+            if choice.lower() == "no":
+                print "You have chosen no"
+                return None
+            elif choice.lower() == "yes":
+                gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+                if gains is None:
+                    print "Sorry, there are no measurements for this combination at all"
+                    return None
+            else:
+                print "Invalid input, you were supposed to enter yes or no"
+                return None
+            
+        max_gain = -float("inf")
+        min_gain = float("inf")
+        for i in gains:
+            if i[0]>max_gain:
+                max_gain = i[0]
+            if i[0]<min_gain:
+                min_gain = i[0]
                 
-            if (float(line_list[2]) < min):
-                min = float(line_list[2])
-                
-        return [min, max]
-        
+        return [min_gain, max_gain]
+    
     @staticmethod
-    def getAverageGain(coordinator_id ,tx_node_id, rx_node_id):
-        #read from file (if it exists) and average all values from file
+    def getMinMaxNoise(coordinator_id, tx_node_id, rx_node_id, year=None, month=None, day=None):
+        #read from file (if it exists) and return the minimum and maximum noise
+        #specify year, month, day if you only want to take into account gain measurements made until that date. If those are not specified, then all measurements will be taken into account.
         
+        #first get data from the file
+        gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+        #gains will have the following form : [ [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], .. ]
+        
+        if gains is None:
+            aux = tx_node_id
+            tx_node_id = rx_node_id
+            rx_node_id = aux
+            print "There are no values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat? (yes or no)" %(tx_node_id, rx_node_id)
+            choice = raw_input("")
+            
+            if choice.lower() == "no":
+                print "You have chosen no"
+                return None
+            elif choice.lower() == "yes":
+                gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+                if gains is None:
+                    print "Sorry, there are no measurements for this combination at all"
+                    return None
+            else:
+                print "Invalid input, you were supposed to enter yes or no"
+                return None
+            
+        max_noise = -float("inf")
+        min_noise = float("inf")
+        for i in gains:
+            if i[2]>max_noise:
+                max_noise = i[2]
+            if i[2]<min_noise:
+                min_noise = i[2]
+                
+        return [min_noise, max_noise]
+            
+    @staticmethod
+    def getMostRecentGainMeasurments(coordinator_id, tx_node_id, rx_node_id, number = 6):
+        #number represents the number of measurements to be returned. How many measurements you want to get. Example: if number=3, return last 3 measurements made
+        #use this method when you want to get a list with a specified number of last measurements made
+        if number == 0:
+            #that means nothing
+            return None
+        
+        #define a queue
+        queue = MyQueue(number)
+    
+        #read from file (if it exists)
         #first, check if the file exists
         path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id)
-        if not os.path.isfile(path) and not os.path.exists(path):
-            print "There is no average values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat" %(rx_node_id, tx_node_id)
-            path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,rx_node_id, tx_node_id)
-            if not os.path.isfile(path) and not os.path.exists(path):
-                print "There is no average values available for this combination."
-                return
         
+        if not os.path.isfile(path) or not os.path.exists(path):
+            return None
         
         f = open(path, "r")
         
         #read first line, it's a header
         f.readline()
         
-        #initialize sum with 0
-        s = 0.000000
-        
-        #k will represent the number of values 
-        k = 0.00
-        
+        #read file line by line
         while True:
             line = f.readline()
             if not line:
                 break
             
-            #line list: [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ]
+            #define a line list: [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ] - this is how results are saved in the file
             line_list = line.split()
             try:
-                s += float(line_list[0])
-                k+=1
-            except Exception:
-                print "Exception at gain average"
-                continue
-            
-        f.close()
-        return s/k;
+                queue.append(float(line_list[0]))
+            except:
+                pass
         
+        f.close()
+        return queue.getListReverse()
     
     @staticmethod
-    def getAverageDataMeasurmentsFromFile(coordinator_id ,node_id):
-        #reads the data from file, average power at every frequency
+    def getUpdatedPredictedGain(coordinator_id ,tx_node_id, rx_node_id, number = 6):
+        #this method will take a new channel gain measurement (update) and based on number measurements done previously and saved in a .dat file will predict the next gain
+        
+        #get last 6 measurements made
+        recentMeasurements = GainCalculations.getMostRecentGainMeasurments(coordinator_id, tx_node_id, rx_node_id, number)    
+        if recentMeasurements is None:
+            #invert tx with rx
+            aux = tx_node_id
+            tx_node_id = rx_node_id
+            rx_node_id = aux
+            print "There are no measurements available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat?(yes or no)" %(tx_node_id, rx_node_id)
+            choice = raw_input("")
+            if choice.lower() == "no":
+                print "You have chosen no"
+                return None
+            
+            elif choice.lower() =="yes":
+                recentMeasurements = GainCalculations.getMostRecentGainMeasurments(coordinator_id, tx_node_id, rx_node_id, number)
+                if recentMeasurements is None:
+                    print "There are no measurements available for this combination at all."
+                    return None
+            else:
+                print "Invalid input, you were supposed to enter yes or no"
+                return None
+            
+        #take a new measurement
+        instant_gain= GainCalculations.calculateInstantGain(coordinator_id, tx_node_id, rx_node_id, measuring_freq=2420e6, saveresults=False, transmitting_duration=6)
+        #append the instant gain to the end of the recentMeasurements list
+        if instant_gain is None:
+            print "Cannot measure instant channel gain"
+            return None
+        recentMeasurements.append(instant_gain)
+        
+        predicted_gain = kalmanImplementation.getPredictedValuesVer2(recentMeasurements, standard_deviation=GainCalculations.getStandardDeviation(coordinator_id, tx_node_id, rx_node_id))[-1]
+        print "Gain measurement between tx_%d and rx_%d: instant gain: %.3f dB   predicted gain: %.3f dB" %(tx_node_id, rx_node_id, 10.00 * math.log10(instant_gain),  10.00*math.log10(predicted_gain) )
+        return predicted_gain
+        
+    @staticmethod
+    def getStandardDeviation(coordinator_id ,tx_node_id, rx_node_id):    
+        #use this method when you want to calculate standard deviation from the saved gain measurements
+        #read from file (if it exists)
+        
+        #first get data from the file
+        gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id)
+        #gains will have the following form : [ [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], .. ]
+        
+        if gains is None:
+            aux = tx_node_id
+            tx_node_id = rx_node_id
+            rx_node_id = aux
+            print "There are no values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat? (yes or no)" %(tx_node_id, rx_node_id)
+            choice = raw_input("")
+            
+            if choice.lower() == "no":
+                print "You have chosen no"
+                return None
+            elif choice.lower() == "yes":
+                gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id)
+                if gains is None:
+                    print "Sorry, there are no measurements for this combination at all"
+                    return None
+            else:
+                print "Invalid input, you were supposed to enter yes or no"
+                return None
+           
+        #we are interested only in gains, not other data
+        gain_measurements = []
+        for i in gains:
+            gain_measurements.append(i[0])
+        
+        return kalmanImplementation.getStandardDeviation(gain_measurements)
+        
+    @staticmethod
+    def getAverageGain(coordinator_id ,tx_node_id, rx_node_id, year=None, month=None, day=None):
+        #return the average gain from the saved gain measurements.
+        #specify year, month, day if you only want to take into account gain measurements made until that date. If those are not specified, then all measurements available will be taken into account.
+        #read from file (if it exists)
+        
+        #first get data from the file
+        gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+        #gains will have the following form : [ [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], .. ]
+        
+        if gains is None:
+            aux = tx_node_id
+            tx_node_id = rx_node_id
+            rx_node_id = aux
+            print "There are no values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat? (yes or no)" %(tx_node_id, rx_node_id)
+            choice = raw_input("")
+            
+            if choice.lower() == "no":
+                print "You have chosen no"
+                return None
+            elif choice.lower() == "yes":
+                gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+                if gains is None:
+                    print "Sorry, there are no measurements for this combination at all"
+                    return None
+            else:
+                print "Invalid input, you were supposed to enter yes or no"
+                return None
+            
+        sum = 0.00
+        k = 0.00
+        for i in gains:
+            sum+=i[0]
+            k+=1
+            
+        return sum/k
+    
+    ''' 
+    @staticmethod
+    def getPredictionGainUsingKalmanFilter(coordinator_id ,tx_node_id, rx_node_id, year=year, month=month, day=day):
+        #apply Kalman filter for all measurements made. This will return a list which will contains predicted values. I use this just in gains plots.
+        
+        #first get data from the file
+        gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+        #gains will have the following form : [ [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], .. ]
+        
+        if gains is None:
+            aux = tx_node_id
+            tx_node_id = rx_node_id
+            rx_node_id = aux
+            print "There are no values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat? (yes or no)" %(tx_node_id, rx_node_id)
+            choice = raw_input("")
+            
+            if choice.lower() == "no":
+                print "You have chosen no"
+                return None
+            elif choice.lower() == "yes":
+                gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+                if gains is None:
+                    print "Sorry, there are no measurements for this combination at all"
+                    return None
+            else:
+                print "Invalid input, you were supposed to enter yes or no"
+                return None
+            
+        gain_list = []
+        for i in gains:
+            gain_list.append(i[0])
+        
+        return kalmanImplementation.getPredictedValuesVer2(gain_list)
+    '''    
+    
+    @staticmethod
+    def getAverageDataMeasurementsFromFile(coordinator_id ,node_id):
+        #when spectrum sensing is taking place, all data is saved in a file. For the same frequency, we can have multiple samples of RSSI. We want the average of the measured power from that file
+        #reads the data from file, average the power at every frequency
         #returns a list with the following structure: [[frequency] , [average_power for one specific frequency]]
         #average power returned is linear [ W ]
+        
         #open the file for reading
         f = open("./data/coor_%d/node_%d.dat" %(coordinator_id ,node_id) , "r")
         
         #read first line, it's a header
         f.readline()
         
-        #data_list [[frequency]  ,[ [ list of all powers for that frequency]  ]]
-        #an example of data_list:  [[freq1, freq2] , [[p1, p2, p3], [p1, p2] ]]
+        #I want to make a data_list with the following structure: [ [frequency]  ,[ [ list of all powers for that frequency] ] ]
+        #An example of data_list:  [[freq1, freq2] , [[RSSI1, RSSI2, RSSI3], [RSSI1, RSSI2] ]]
         data_list = [[], []]
         
         #read the entire file
@@ -255,7 +485,7 @@ class GainCalculations:
             #line structure: "time   frequency_hz   power_dbm"
             #split line string (contains several numbers)
             line_list = line.split()
-            #at this step, line_split is something like that: ['123',  '2340e6' , '-90']
+            #at this step, line_split is something like this: ['123',  '2340e6' , '-90']
             
             #convert data_list elements to float
             line_list = GainCalculations.convertListElementsToFloat(line_list)
@@ -277,7 +507,7 @@ class GainCalculations:
                 
         #close the file
         f.close()
-        # a list average_data: [[frequency], [average_power for that frequency]]. It will contain average power for one frequency
+        #I want a list average_data: [[frequency], [average_power for that frequency]]. It will contain the average power for several frequencies
         average_data = [[],[]]
         for i in range(0, len(data_list[0])):
             average_data[0].append(data_list[0][i])
@@ -305,11 +535,11 @@ class GainCalculations:
         #open file
         #first see if the file exits
         path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id)
-        if not os.path.isfile(path) and not os.path.exists(path):
+        if not os.path.isfile(path) or not os.path.exists(path):
             #if the file doesn't exits, then create it
-            print "Writing a new file"
+            print "Writing a new file..."
             f = open(path, "w")
-            f.write("[Gain]                [Received power ]           [Noise power]            [Transmitted power]            [Date]     - all power units in watts\n")
+            f.write("[Gain]                [Received power ]           [Noise power]            [Transmitted power]            [Date]     - all power units in W\n")
             f.close()
         
         #append new data to file
@@ -322,55 +552,53 @@ class GainCalculations:
         f.close()
         
     @staticmethod
-    def plotGains(coordinator_id ,tx_node_id, rx_node_id):
-        #open file and plot results from it
+    def plotGains(coordinator_id ,tx_node_id, rx_node_id, year = None, month = None, day = None):
+        #call the method when you want to plot the results from the .dat file
+        #opens the file with the channel gain measurements and plots the results from it
+        #specify year, month, day if you only want to take into account gain measurements made until that date. If those are not specified, then all measurements will be taken into account.
         
-        #first, check if the file exists
-        path = "./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id)
-        if not os.path.isfile(path) or not os.path.exists(path):
-            print "There is no measurement values available for this combination"
-            return
-   
-        print "Plot gains"
-        f = open("./gain measurements/coor_%d/gain_between_tx_%d_and_rx_%d.dat" %(coordinator_id ,tx_node_id,  rx_node_id), "r")
+        #first get data from the file
+        gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+        #gains will have the following form : [ [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], [gain - linear , received_power[w] , noise_power[w], transmitted_power[w], date ], .. ]
         
-        #read first line, it's a header
-        f.readline()
-        
-        #define a gain_list : [[gain], [date]]
+        if gains is None:
+            aux = tx_node_id
+            tx_node_id = rx_node_id
+            rx_node_id = aux
+            print "There are no values available for this combination. Trying with gain_between_tx_%d_and_rx_%d.dat? (yes or no)" %(tx_node_id, rx_node_id)
+            choice = raw_input("")
+            
+            if choice.lower() == "no":
+                print "You have chosen no"
+                return None
+            elif choice.lower() == "yes":
+                gains = GainCalculations.getFileResults(coordinator_id, tx_node_id, rx_node_id, year=year, month=month, day=day)
+                if gains is None:
+                    print "Sorry, there are no measurements for this combination at all"
+                    return None
+            else:
+                print "Invalid input, you were supposed to enter yes or no"
+                return None
+            
+        print "Plot gains"    
+            
+        #define a gain_list : [[gain_dB], [date]]
         gain_list = [[],[]]
         
-        
-        while True:
-            line = f.readline()
-        
-            if not line:
-                break
-                
-            #line has the following structure: [gain , received_power[w] , noise_power[w], transmitted_power[w], date ]
-            #split line
-            line_list = line.split()
-            
-            #append gain and date to gain_list
-            try:
-                #2013-07-22 10:10:54.466393
-                #in file gains are in linear value, it's more comfortable to display in logarithmic scale        
-                gain_list[0].append(10.00 * math.log10(float(line_list[0])))
-                gain_list[1].append(DateTime.strptime(  (line_list[4] + " " + line_list[5])[0:16], "%Y-%m-%d %H:%M"  ))
-            except Exception:
-                continue
+        for i in gains:
+            date = DateTime.strptime((i[4])[0:16], "%Y-%m-%d %H:%M")
+            gain_list[0].append(10.00 * math.log10(i[0]) )
+            gain_list[1].append(date)
             
         #plot results
-        Plot.plot_x_y_date_lists(gain_list[1], gain_list[0], "Time", "Gain [dB]", "Gain between: tx%d and rx%d" %(tx_node_id, rx_node_id), False)
-        #Plot.plot_list(gain_list[0], "Gain between: tx%d and rx%d" %(tx_node_id, rx_node_id), False)
-    
+        Plot.plotGains(gain_list[1], gain_list[0], "Number of measurements", "Gain [dB]", "Gain between: tx%d and rx%d" %(tx_node_id, rx_node_id), False)
+        
     @staticmethod
     def plotAllGainsWithinCoordinator(coordinator_id):
+        #if you want to plot all gains within a coordinator call this method.
         path = "gain measurements/coor_%d" %coordinator_id
-        #print os.listdir(path)
         
         for i in os.listdir(path):
             tx_node_id = i[ (i.index("tx_") +3) : (i.index("_and"))]
             rx_node_id = i[ (i.index("rx_") +3):  (i.index(".dat"))]
             GainCalculations.plotGains(coordinator_id, int(tx_node_id), int(rx_node_id))
-         
