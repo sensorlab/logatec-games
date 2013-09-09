@@ -1,7 +1,7 @@
 from node import Node
 from plot import Plot
 from datetime import datetime as DateTime
-from my_queue import MyQueue
+from myQueue import MyQueue
 import kalmanImplementation
 import time
 import math
