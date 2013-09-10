@@ -1,6 +1,6 @@
 # Introduction
 
-This package provides Python *.py files (gainCalculations.py) for measuring and calculating the gain (Cij - contains the antenna's gain and the environmental attenuation) between two nodes located in a VESNA-based wireless sensor network that uses ALH protocol in order to communicate.
+This package provides Python *.py files for measuring and calculating the gain (hij - contains the antenna's gain and the environmental attenuation) between two nodes located in a VESNA-based wireless sensor network that uses ALH protocol in order to communicate.
 
 Before using this package, please install VESNA ALH Tools and Python bindings for VESNA spectrum sensor application. In order to do this, please follow the steps described here:
 
@@ -12,14 +12,14 @@ Before using this package, please install VESNA ALH Tools and Python bindings fo
 (see its own README file for installation instructions - _Tomaz Solc_)
 * https://github.com/sensorlab/vesna-spectrum-sensor
 
----------------------------------------------------------------------------------------------------
+
 ##Methodology for measuring the gain between two nodes
 
 
 We consider a system formed by a single transmitter-receiver pair: TXi - RXj
 
     
-			+------+          +------+
+    		+------+          +------+
 			| TXi  | --hij--> | RXj  |
 			+------+          +------+ 
 			   |		         |
@@ -37,9 +37,10 @@ knowing that the transmitter TXi is silent.
 
           hij = (PRXj - Pnoise) / (PTXi) where:
 
-* PRXj [W] is the power received at receiver j
-* PTXi [W] is the power transmitted by transmitter i
-* Pnoise [W] is the noise power.
+                                    - PRXj [W] is the power received at receiver j
+                                    - PTXi [W] is the power transmitted by transmitter i
+                                    - Pnoise [W] is the noise power.
+
 
          +------+                          +------+
          | TXi  | ----------hij----------> | RXj  |
@@ -47,8 +48,8 @@ knowing that the transmitter TXi is silent.
 
          Fig.2 Ideal situation, where in the system there is no noise power
 
-                        Cij = PRXj / PTXi
----------------------------------------------------------------------------------------------------
+                        hij = PRXj / PTXi
+
          +------+                   +-----+        +------+
          | TXi  | ----------hij-----| ADD |------> | RXj  |
          +------+                   +-----+        +------+ 
@@ -62,7 +63,7 @@ knowing that the transmitter TXi is silent.
         Fig.3 Real situation, where the noise signal adds to the transmitted signal
 
                         hij = (PRXj - Pnoise) / (PTXi)
----------------------------------------------------------------------------------------------------
+
 # Steps to follow in order to measure the gain between two nodes:
 
 
@@ -70,7 +71,7 @@ knowing that the transmitter TXi is silent.
 1. Generate a signal.
 1. Measure the received signal
 1. Calculate Cij gain
----------------------------------------------------------------------------------------------------
+
 #Practical logical scheme
                                                                                         ------+
             +-------------------------------------------------------------------------------+  |
@@ -111,36 +112,36 @@ knowing that the transmitter TXi is silent.
 gainCalculations.py contains GainCalculations class with the following methods:
 
 * **1) calculateInstantGain(coor_id,tx_id,rx_id,measuring_freq,transmitting_duration)**
-        * defines one transmission node and one reception node
-        * sets the measurement frequency, transmitting power in [dBm], transmission duration in [s]     and the sensing duration in seconds
-        * configures the reception node for sensing
-        * starts the sensing on the reception node
-        * measures the noise power
-        * configures the transmission noise for signal generation
-        * starts the transmission
-        * measures the received signal
-        * returns the calculated Cij gain
+* defines one transmission node and one reception node
+* sets the measurement frequency, transmitting power in [dBm], transmission duration in [s]     and the sensing duration in seconds
+* configures the reception node for sensing
+* starts the sensing on the reception node
+* measures the noise power
+* configures the transmission noise for signal generation
+* starts the transmission
+* measures the received signal
+* returns the calculated Cij gain
 * **2) getAverageDataMeasurementsFromFile(coor_id,node_id)**
-        * reads the data from file (data was stored in a file by the sensing method)
-        * it averages the power at every frequency
+* reads the data from file (data was stored in a file by the sensing method)
+* it averages the power at every frequency
 * returns a list with the following structure:[frequency,averaged power for one specific frequency]
 * **3) getAverageGain(coord_id,tx_id,rx_id)**
-        * reads the data from file
-        * it averages all the gain data in that file
+* reads the data from file
+* it averages all the gain data in that file
 * **4) printResultsInAFile(results_list, coor_id, tx_id, rx_id)**
-        * appends results_list in a file
+* appends results_list in a file
 * the results_list contains :[gain,received_power[w],noise_power[w],transmitted_power[w], date] * **5) plotGains(coor_id,tx_id,rx_id)**
-        * opens the file containing the gain measurements
-        * plots the gains Cij(t)
+* opens the file containing the gain measurements
+* plots the gains Cij(t)
 * **6) getMinMaxGain(coord_id,tx_id,rx_id)**
-        * reads the data from file and it returns the maximum and the minimum measured gain
+* reads the data from file and it returns the maximum and the minimum measured gain
 * **7) getMinMaxNoise(coord_id,tx_id,rx_id)**
-        * reads the data from file and it returns the maximum and the minimum measured noise
+* reads the data from file and it returns the maximum and the minimum measured noise
 * **8) getMostRecentGainMeasurments(coord_id,tx_id,rx_id,number)**
-        * returns a list a number of "number" last channel gain measurements made
+* returns a list a number of "number" last channel gain measurements made
 * **9) getUpdatedPredictedGain(coord_id,tx_id,rx_id,number)**
-        * this method will take a new channel gain measurement (update) and based on number measurements done previously and saved in a .dat file will predict the next gain
+* this method will take a new channel gain measurement (update) and based on number measurements done previously and saved in a .dat file will predict the next gain
 * **10) getStandardDeviation(coord_id,tx_id,rx_id)**
-        * returns the standard deviation of the channel gain measurements stored in a .dat file
+* returns the standard deviation of the channel gain measurements stored in a .dat file
 * **11) plotAllGainsWithinCoordinator(coord_id)**
-        * plots all the gain within the coordinator
+* plots all the gain within the coordinator
