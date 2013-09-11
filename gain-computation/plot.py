@@ -2,7 +2,7 @@ from matplotlib import pyplot as plot
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import dates
-
+import os
 import time
 import matplotlib
 import numpy
@@ -11,7 +11,7 @@ import kalmanImplementation
 import random
 
 class Plot:
-    #has several static methods used for plotting
+    #has several static method for plotting
          
     @staticmethod    
     def plotXYLists(x, y, title, xlabel, ylabel, ion = False): 
@@ -213,7 +213,7 @@ class Plot:
         linear_average_gain = sum/k
         plot.axhline(10.00 * math.log10(linear_average_gain), color = 'r', linewidth = 2.2, label = "Average gain %.3f dB" %(10.00*math.log10(linear_average_gain)))
         
-        #We want to shadow the night measurements with a color, and the day measurements with other color
+        #We want to shade the night measurements with a color, and the day measurements with other color
         #make 2 lists, which represents the intervals for day and night. day intervals : [ [a,b, day], [c,d, day] ,[e,f, day] ]
         day_intervals = []
         night_intervals = []
@@ -306,7 +306,11 @@ class Plot:
          
         fig = plot.gcf()
         fig.set_size_inches( (19, 11) )
-        plot.savefig("/home/ciprian/Pictures/gains plots/%s.jpg" %(title), dpi=250)
+        try:
+            os.mkdir("./gain plots")
+        except:
+            pass
+        plot.savefig("./gain plots/%s.jpg" %(title), dpi=250)
         #return
         if ion:
             plot.draw()
