@@ -7,7 +7,7 @@ import os
 import logging
 
 class Node:
-    #This class contains methods for configuring the nodes, for generating a signal and for sensing the spectrum
+    #This class has methods for configuring the VESNA nodes, for generating a signal, for spectrum sensing
     #This class uses VESNA modules.
     
     tx_config = None
@@ -160,6 +160,3 @@ class Node:
         #get a program object
         program = SignalGeneratorProgram(self.tx_config, time_start, time_duration)
         SignalGenerator(self.node).program(program)
-       
-            
-    
