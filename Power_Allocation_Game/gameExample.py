@@ -25,6 +25,10 @@ def main():
     #define two players, chose gameType as the following: 1-implementation 1 (theoretical) ; 2 - implementation 2(practically form 1);  3 - implementation 3(practically form 2) - recommended
     player1 = Player(10001, 25, 2, 1000.00, 1, game_Type=1)
     player2 = Player(10001, 16, 17, 1000.00, 2, game_Type=1)
+
+    #set links between players. (They have to communicate one with each other)
+    player1.setNeighborPlayer(player2)
+    player2.setNeighborPlayer(player1)
     
     #update gains
     player1.measureGains()
@@ -37,10 +41,6 @@ def main():
     #check convergence. See if the topology suits the game conditions
     if not checkConvergence(player1.direct_gain, player2.cross_gain, player1.cross_gain, player2.direct_gain):
         return
-    
-    #set links between players. (They have to communicate one with each other)
-    player1.setNeighborPlayer(player2)
-    player2.setNeighborPlayer(player1)
     
     #start Power Allocation threads
     player1.startGame()
