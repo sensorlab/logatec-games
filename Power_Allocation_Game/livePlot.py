@@ -38,7 +38,7 @@ class gameLivePlot (threading.Thread):
         return tmp_bi
     
     def getPlayer2Bi(self):
-        #check if there is a difference between local best response (player1_bi) and power allocation best response
+        #check if there is a difference between local best response (player2_bi) and power allocation best response
         tmp_bi = []
         for i in range(0, len(self.player2.powerAllocation.results_list)):
             #append only untouched best response
@@ -75,9 +75,9 @@ class gameLivePlot (threading.Thread):
                 update_plot = True
                 
             if update_plot:
-                #re plot data
+                #replot data
                 plot.clf()
-                #create axes
+                #create axis
                 ax1 = fig1.add_subplot(211)
                 
                 ax1.grid()
@@ -102,21 +102,21 @@ class gameLivePlot (threading.Thread):
                 
                 ax2 = fig1.add_subplot(212)
                 ax2.grid()
-                ax2.set_xlabel("Player 1's power [dBm]")
-                ax2.set_ylabel("Player 2's power [dBm]")
+                ax2.set_xlabel("Player 1 - Power [dBm]")
+                ax2.set_ylabel("Player 2 - Power [dBm]")
                 
                 min_length = len(self.player1_bi)
                 if len(self.player2_bi) < min_length:
                     min_length = len(self.player2_bi)
                 
                 try:
-                    ax2.plot(self.player1_bi[0:min_length], self.player2_bi[0:min_length], 'o', color="gray", alpha=0.7)
-                    ax2.plot([self.player1_bi[-1]], [self.player2_bi[-1]], 'or')
+                    ax2.plot(self.player1_bi[0:min_length], self.player2_bi[0:min_length], 'o', color="gray", alpha=0.7, label="Previous power set")
+                    ax2.plot([self.player1_bi[-1]], [self.player2_bi[-1]], 'or', label="Current power set")
                 except:
                     pass
                 
                 ax2.axis([self.player1_bi[-1]-3, self.player1_bi[-1] +3, self.player2_bi[-1]-3, self.player2_bi[-1]+3])
-                
+                ax2.legend(loc = "upper right", bbox_to_anchor=(1.1, 1.1))
                 plot.draw()
                 
             if( not self.player1.powerAllocation.is_alive() and not self.player2.powerAllocation.is_alive()):
