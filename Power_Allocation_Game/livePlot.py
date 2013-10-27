@@ -120,11 +120,9 @@ class gameLivePlot (threading.Thread):
                 plot.draw()
                 
             if( not self.player1.powerAllocation.is_alive() and not self.player2.powerAllocation.is_alive()):
+                #wait 10 seconds before closing the plot
                 time.sleep(10)
                 plot.close()
                 break
         
-            time.sleep(0.5)
-            
-            
-            
+            time.sleep(0.5)            
