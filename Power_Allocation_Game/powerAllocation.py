@@ -632,7 +632,9 @@ class PowerAllocation(threading.Thread):
                     if self.player.player_number == 1:
                         self.printStrategyTable(self.best_response_untouched, self.neighborPowerAllocation.best_response_untouched, iterations)
                     
-                    break
+		    while True:
+			    time.sleep(1)
+
             time.sleep(0.05)
             
     def run(self):
