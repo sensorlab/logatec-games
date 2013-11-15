@@ -86,12 +86,16 @@ class Plot:
         #in this case y1 and y2 = [[y_1], [y_2],[y_3] ].
         #example y1 = [[1,2,3],[0,1,2,4,5], ..]
         #use this for plotting iterations
+        
+        plot.figure(2)
+        
         if ion:
             plot.ion()
         else:
             plot.ioff()
         plot.clf()
        
+        
         #I want to make 2 sub plots. ax1 represents the first, ax2 represents the second
         ax1 = plot.subplot(211)
         ax2 = plot.subplot(212, sharex=ax1)
@@ -149,17 +153,17 @@ class Plot:
         ax2.set_title(title2)
        
         #maximize the window
-        mng = plot.get_current_fig_manager()
-        mng.resize(*mng.window.maxsize())
+        #mng = plot.get_current_fig_manager()
+        #mng.resize(*mng.window.maxsize())
         
         if SaveImg:
             fig = plot.gcf()
             fig.set_size_inches( (19, 11) )
             if Truncated:
-                plot.savefig("./iterations/c1_%d-c2_%d/c1_%d-c2_%d-truncated.jpg" %(c1,c2,c1,c2), dpi=200)
+                plot.savefig("./iterations/c1_%d-c2_%d/c1_%d-c2_%d-truncated.png" %(c1,c2,c1,c2), dpi=200)
             else:
-                plot.savefig("./iterations/c1_%d-c2_%d/c1_%d-c2_%d-nontruncated.jpg" %(c1,c2,c1,c2), dpi=200)
-                plot.savefig("./iterations/c1_%d-c2_%d-nontruncated.jpg" %(c1,c2), dpi=200)
+                plot.savefig("./iterations/c1_%d-c2_%d/c1_%d-c2_%d-nontruncated.png" %(c1,c2,c1,c2), dpi=200)
+                plot.savefig("./iterations/c1_%d-c2_%d-nontruncated.png" %(c1,c2), dpi=200)
             return  
         
         if ion:
@@ -296,13 +300,32 @@ class Plot:
         #plot a text with number of measurements
         plot.text(2, min(y_list)-1, "Number of\nmeasurements:\n%d" %len(y_list), color = "black", weight = 700, fontsize = 22)
         
-        leg = plot.legend(loc = 'upper right', bbox_to_anchor=(1.05, 1.05), fontsize = 22)
+        
+        #determining the mse for average
+        sum_tmp = 0
+        for i in y_list_linear:
+            sum_tmp+=math.pow((linear_average_gain-i), 2)
+        mse_average = sum_tmp/len(y_list_linear)
+         
+        #determining the mse for kalman
+        y_list_predictedVer2 = kalmanImplementation.getPredictedValuesVer2(y_list_linear)
+        sum_tmp = 0
+        for i in range(0, len(y_list_linear)):
+            sum_tmp+=math.pow(y_list_predictedVer2[i]-y_list_linear[i], 2)
+        mse_kalman = sum_tmp/len(y_list_linear)
+        
+        #plot.plot([],label = "Avg mse: %f" %(mse_average))
+        #plot.plot([],label= "Kalman mse: %f" %(mse_kalman))
+        print mse_average
+        print mse_kalman
+        
+        
+        leg = plot.legend(loc = 'upper right', bbox_to_anchor=(1.005, 1.01), fontsize = 22)
         leg.get_frame().set_alpha(0.7)
         
         #maximize the window
         mng = plot.get_current_fig_manager()
         mng.resize(*mng.window.maxsize())
-        
          
         fig = plot.gcf()
         fig.set_size_inches( (19, 11) )
@@ -310,10 +333,12 @@ class Plot:
             os.mkdir("./gain plots")
         except:
             pass
-        plot.savefig("./gain plots/%s.jpg" %(title), dpi=250)
+        plot.savefig("./gain plots/%s.png" %(title), dpi=250)
         #return
         if ion:
             plot.draw()
         else:
             plot.show()
+            
+    
         

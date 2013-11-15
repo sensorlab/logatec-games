@@ -51,7 +51,7 @@ class PowerAllocation(threading.Thread):
     equilibriumDetected = False
     
     def __init__(self, playerObject ,playerAppObject, gameType = 3):
-        print "Player power Allocation version 2"
+        print "Player power Allocation"
         threading.Thread.__init__(self)
         
         #save player object, that way, I can have any data I want from this player. Player object contains info about nodes (tx and rx), gains, cost..
@@ -73,6 +73,10 @@ class PowerAllocation(threading.Thread):
         print "PowerAllocation associated to player %d" %self.player.player_number    
     
     def setGameType(self, game_type):
+        if game_type<1 or game_type>3:
+            print "Game type can be 1, 2 or 3"
+            self.game_type = 1
+            return
         self.game_type = game_type    
         
     def setNeighborPowerAllocationObject(self, powerAllocationObject):
@@ -555,7 +559,7 @@ class PowerAllocation(threading.Thread):
                 #now we have anything we need to calculate new power
                 self.previous_transmitted_power = self.current_transmitting_power
                 #the best response returned is in dBm
-                self.current_transmitting_power = self.getBestResponse3(received_power[1][0])
+                self.current_transmitting_power = self.getBestResponsePracticallyForm2(received_power[1][0])
                 
                 #sometimes formula returns a negative power in linear, that can't be possible in practice, so if that happens, continue this iteration
                 if self.current_transmitting_power is None:
@@ -629,7 +633,7 @@ class PowerAllocation(threading.Thread):
                         self.printStrategyTable(self.best_response_untouched, self.neighborPowerAllocation.best_response_untouched, iterations)
                     
                     break
-            time.sleep(0.03)
+            time.sleep(0.05)
             
     def run(self):
         if self.game_type == 1:

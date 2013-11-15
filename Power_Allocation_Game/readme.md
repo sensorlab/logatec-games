@@ -20,6 +20,7 @@ Before using this package, please install VESNA ALH Tools and Python bindings fo
 * **gainCalculations** - used for performing channel gain measurements.
 * **Noise** - used for measuring the noise power.
 * **Plot** - used for plotting the results.
+* **livePlot** - live demo of the game
 * **bestResponseAnalysis** - used for analysing the behaviour of the best response as a function of different parameters.
 * **Kalmanimplementation** - used for implementing the Kalman Filter
 * **MyQueue** - use as a queue of channel gains and best responses.
