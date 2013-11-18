@@ -76,7 +76,12 @@ class Player:
     
     def printPlayerInfo(self):
         #just print some info about the player
-        print "Player %d : tx=%d  rx=%d  direct gain=%.6fE-8 (%.3f dB)   cross gain=%.12fE-8 (%.3f dB)  cost = %.3f   noise power = %.6fE-12" %(self.player_number, self.tx_node.node_id, self.rx_node.node_id, self.direct_gain * 1e8, 10.00*math.log10(self.direct_gain),self.cross_gain * 1e8, 10.00*math.log10(self.cross_gain), self.cost, self.noise_power * 1e12)
+	print "\x1b[1m"
+	print "*" * 79
+	print "Player %d info:" % (self.player_number,)
+        print "tx=%d  rx=%d  direct gain=%.6fE-8 (%.3f dB)   cross gain=%.12fE-8 (%.3f dB)  cost = %.3f   noise power = %.6fE-12" %(self.tx_node.node_id, self.rx_node.node_id, self.direct_gain * 1e8, 10.00*math.log10(self.direct_gain),self.cross_gain * 1e8, 10.00*math.log10(self.cross_gain), self.cost, self.noise_power * 1e12)
+	print "*" * 79
+	print "\x1b[0m"
         self.powerAllocation.printPowerAllocationInfo()
         self.playerApp.printPlayerAppInfo()
         
