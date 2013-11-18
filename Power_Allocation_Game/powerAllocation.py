@@ -624,8 +624,10 @@ class PowerAllocation(threading.Thread):
                     
             else:
                 if self.equilibriumDetected:
+                    print "\x1b[1;31m"
                     print "Player %d Equilibrium. No events had been detected. Number of iterations:%d. Time passed: %.6f \n" %(self.player.player_number, iterations, (time.time() - process_start_time) - 45) 
                     print "Player %d power allocated: %.3f" %(self.player.player_number, self.current_transmitting_power)
+                    print "\x1b[0m"
                     
                     #write experiment results in a file
                     self.printIterationsToFile(self.results_list, "Using threshold with a 5 size queue, predicted gains")
