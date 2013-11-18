@@ -34,14 +34,14 @@ def main():
         player2.setNeighborPlayer(player1)
         
         #update gains
-        #player1.measureGains()
-        #player2.measureGains()
+        player1.measureGains()
+        player2.measureGains()
         
-        player1.setDirectGain(GainCalculations.getAverageGain(player1.coordinator_id, player1.tx_node.node_id, player1.rx_node.node_id, year=2013, month=8, day=23))
-        player1.setCrossGain(GainCalculations.getAverageGain(player1.coordinator_id, player2.tx_node.node_id, player1.rx_node.node_id, year=2013, month=8, day=23))
+	#player1.setDirectGain(GainCalculations.getAverageGain(player1.coordinator_id, player1.tx_node.node_id, player1.rx_node.node_id, year=2013, month=8, day=23))
+	#player1.setCrossGain(GainCalculations.getAverageGain(player1.coordinator_id, player2.tx_node.node_id, player1.rx_node.node_id, year=2013, month=8, day=23))
         
-        player2.setDirectGain(GainCalculations.getAverageGain(player2.coordinator_id, player2.tx_node.node_id, player2.rx_node.node_id, year=2013, month=8, day=23))
-        player2.setCrossGain(GainCalculations.getAverageGain(player2.coordinator_id, player1.tx_node.node_id, player2.rx_node.node_id, year=2013, month=8, day=23))       
+	#player2.setDirectGain(GainCalculations.getAverageGain(player2.coordinator_id, player2.tx_node.node_id, player2.rx_node.node_id, year=2013, month=8, day=23))
+	#player2.setCrossGain(GainCalculations.getAverageGain(player2.coordinator_id, player1.tx_node.node_id, player2.rx_node.node_id, year=2013, month=8, day=23))       
         
         #if you want to see some info about players
         player1.printPlayerInfo()
