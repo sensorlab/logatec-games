@@ -16,37 +16,45 @@
 
 # Authors: Mihai Suciu
 #
+"""
+Created on Mar 18, 2014
+
+Based on: https://github.com/sensorlab/logatec-games/tree/master/Power_Allocation_Game
+
+@version: 2.0
+@author: mihai
+"""
 
 from collections import deque
 
 class MyQueue:
     """This class forms a queue of a given size. It has methods for appending data and returning the current queue.
     As implemented: https://github.com/sensorlab/logatec-games/tree/master/Power_Allocation_Game
-    
+
     """
     len = 0
-    
+
     def __init__(self, queueLen):
         self.len = queueLen
-        
+
         self.queueList = deque([])
-        
+
     def append(self, value):
         if len(self.queueList) < self.len:
             self.queueList.appendleft(value)
         elif len(self.queueList) == self.len:
             self.queueList.pop()
             self.queueList.appendleft(value)
-    
+
     def getList(self):
         # return list as the following: [last value added, older value, older value...]
         return list(self.queueList)
-    
+
     def getListReverse(self):
         # returns list as the following: [oldest value, newer value,. ... , last value added]
         tmpList = list(self.queueList)
         tmpList.reverse()
         return tmpList
-    
+
     def emptyList(self):
         self.queueList = deque([])
