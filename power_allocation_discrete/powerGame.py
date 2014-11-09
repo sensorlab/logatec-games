@@ -826,23 +826,26 @@ class PowerGame():
                 step_tx_powers[key] = self.players[key].physicalLayer.getCrtTxPower()
             self.my_plot.plot_tx_powers(step_tx_powers)
 
-
         while True:
-            if gameIterations == 12:
-                print "stop"
+            print "game iteration %d" % (gameIterations+1)
+            # if gameIterations == 12:
+            #     print "stop"
             if gameIterations == 50:
                 break
             elif gameIterations == 13:
                 mask[3] = False
+                print "Player 4 has left the game!!"
                 self.resetLogicalDictionary(self.playerEvent, False)
                 self.playerEvent[0] = True
             elif gameIterations == 26:
                 mask[3] = True
+                print "Player 4 rejoins the game!!"
                 self.resetLogicalDictionary(self.playerEvent, False)
                 self.playerEvent[3] = True
             elif gameIterations == 39:
                 mask[3] = False
                 mask[2] = False
+                print "players 3 and 4 leave the game!!"
                 self.resetLogicalDictionary(self.playerEvent, False)
                 self.playerEvent[1] = True
             if self.checkPowerEventWithMask(mask):
@@ -872,7 +875,7 @@ class PowerGame():
                         if mask[i]:
                             step_tx_powers[i] = self.players[i].physicalLayer.getCrtTxPower()
                         else:
-                            step_tx_powers[i] = 0
+                            step_tx_powers[i] = -90
                     self.my_plot.plot_tx_powers(step_tx_powers)
 
             self.writeStatToFile(gameIterations, statFilePath)

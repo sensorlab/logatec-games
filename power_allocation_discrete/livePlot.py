@@ -58,7 +58,7 @@ class GameLivePlot():
         for i in range(0, self.nr_players):
             plot.plot(range(0,len(self.gains[i])), self.gains[i], color=self.colors[i], marker=self.markers[i], label="Player %d" % (i+1))
         plot.legend(loc=0, bbox_to_anchor=(1.1, 1.1))
-        plot.axis([0, 70, -30, 0])
+        plot.axis([0, 70, -90, 0])
         plot.draw()
         time.sleep(2)
 

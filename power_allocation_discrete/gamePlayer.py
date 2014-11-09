@@ -257,11 +257,11 @@ class GamePlayer:
             for i in range(1, len(bestrespList)):
                 if float(bestrespList[0]) != float(bestrespList[i]):
                     return False
-            print "Player %d has reached a stable state, i.e. equilibrium." % (self.playerNumber)
+            # print "Player %d has reached a stable state, i.e. equilibrium." % (self.playerNumber+1)
             return True
         else:
             for i in range(1, len(bestrespList)):
                 if math.fabs(math.fabs(float(list[0])) - math.fabs(float(bestrespList[i]))) > float(self.thresholdPower):
                     return False
-            print "Player %d has reached a stable state, i.e. equilibrium." % (self.playerNumber)
+            # print "Player %d has reached a stable state, i.e. equilibrium." % (self.playerNumber+1)
             return True
