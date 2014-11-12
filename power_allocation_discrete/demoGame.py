@@ -28,7 +28,10 @@ def main():
     freq = 2422e6
 
     plr_thresh = 40
-    game_type = 5
+    # game_type = 5
+    game_type = 6
+    nr_game_iterations = 50
+    measuring_period = 10
     nr_runs = 1
 
     # dummy data used when channel gains are not measured
@@ -42,6 +45,9 @@ def main():
 
     powerGame = PowerGame(coord_id, nodes_used, costs, freq, game_type, plr_thresh, plot_results)
     powerGame.initPlayers()
+    if game_type == 6:
+        powerGame.set_total_game_iterations(nr_game_iterations)
+        powerGame.set_measuring_period(measuring_period)
     if consider_dummy_data:
         powerGame.setGameDummyData(dummyDirectGains, dummyCrossGains, None)
     else:

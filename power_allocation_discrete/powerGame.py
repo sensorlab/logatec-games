@@ -28,7 +28,7 @@ Game type:
 3 - multiple run experiments, measure sum(h_ji*p_j)+n_0 individually
 4 - multiple run experiments, measure sum(h_ji*p_j)+n_0 when all opponents transmit
 5 - dynamic game, i.e. players come and go
-
+6 - run the game for a number of iterations, perform channel measurements at specified periods
 @version: 2.0
 @author: mihai
 """
@@ -50,6 +50,11 @@ class PowerGame():
     """
     Power allocation game implementation.
     """
+
+    # number of game iterations
+    nr_game_iterations = 1
+    # define period, in game iterations, for channel measurements
+    measuring_period = 10
 
     # list of players playing the game
     players = list()
@@ -96,7 +101,6 @@ class PowerGame():
         self.playerIterationsThreshold = playerItTh
         self.plot_results = plot_results
 
-
         self.players = dict()
         self.equilibrium = dict()
         self.playersCrtTxPovers = dict()
@@ -108,6 +112,22 @@ class PowerGame():
 
         if self.plot_results:
             self.my_plot = GameLivePlot('Dynamic (cost adaptive) power allocation game')
+
+    def set_total_game_iterations(self, new_game_iter):
+        """
+        set the number of game iterations.
+        :param new_game_iter: number of iterations for the power allocation game
+        :return:
+        """
+        self.nr_game_iterations = new_game_iter
+
+    def set_measuring_period(self, new_period):
+        """
+        set the measuring period
+        :param new_period:
+        :return:
+        """
+        self.measuring_period = new_period
 
 
     def initPlayers(self):
@@ -180,7 +200,7 @@ class PowerGame():
         self.scaleCosts()
 
     def measureGains(self):
-        """Measure h_ii and h_ji between players, store these values in list and dictionary"""
+        """Measure h_ii and h_ji between players, store these values in a list and a dictionary"""
 
         # txNodes = list()
         # rxNodes = list()
@@ -229,7 +249,7 @@ class PowerGame():
         for p in self.players:
             # get tx and rx nodes for cross gain
             # txPlayers.append(self.players[p])
-            #rxPlayers.append(self.players[p])
+            # rxPlayers.append(self.players[p])
             vesnaNodes.append(self.players[p].physicalLayer.txNode)
             vesnaNodes.append(self.players[p].physicalLayer.rxNode)
 
@@ -456,6 +476,9 @@ class PowerGame():
         elif self.gameType == 5:
             filePathResults = getFilePathWithDate(self.coordId, 5, False)
             self.playGameType5(filePathResults)
+        elif self.gameType == 6:
+            filePathResults = getFilePathWithDate(self.coordId, 6, False)
+            self.play_game_type_6(filePathResults)
         else:
             print "Game type %d not implemented!!!" % (self.gameType)
             return
@@ -529,7 +552,7 @@ class PowerGame():
                         # self.playerEvent[key] = self.players[key].updateTxPower(self.playersCrtTxPovers, self.crossGains[key])
                         # self.updatePlayersTxPowers(key, self.players[key].physicalLayer.getCrtTxPower())
                         # self.writePlayerStatToFile(key, gameIterations, statFilePath, multipleRuns, run)
-                        #                     self.equilibrium[key] = self.players[key].isInEquilibrium()
+                        # self.equilibrium[key] = self.players[key].isInEquilibrium()
             else:
                 # check if all players reached a stable state, i.e. in equilibrium
                 if not self.isGameInEquilibrium():
@@ -827,9 +850,9 @@ class PowerGame():
             self.my_plot.plot_tx_powers(step_tx_powers)
 
         while True:
-            print "game iteration %d" % (gameIterations+1)
+            print "game iteration %d" % (gameIterations + 1)
             # if gameIterations == 12:
-            #     print "stop"
+            # print "stop"
             if gameIterations == 50:
                 break
             elif gameIterations == 13:
@@ -880,3 +903,62 @@ class PowerGame():
 
             self.writeStatToFile(gameIterations, statFilePath)
 
+    def play_game_type_6(self, stat_file_path):
+        """
+        Play the power allocation game for n game iterations. Channel measurement is performed at each at given intervals.
+        :param stat_file_path:
+        :return:
+        """
+        print "Game type 6 started"
+        gameIterations = 0
+        oldPlayerPowerEvent = dict()
+        # used to determine which player plays the power allocation game
+        chei = list()
+        step_tx_powers = list()
+        for key in self.players:
+            self.players[key].setPlayerCost(self.playerCostList[key])
+            chei.append(key)
+            step_tx_powers.append(0)
+        self.generateRandomPowerEvent()
+        self.writeStatToFile(gameIterations, stat_file_path)
+
+        if self.plot_results:
+            for key in chei:
+                step_tx_powers[key] = self.players[key].physicalLayer.getCrtTxPower()
+            self.my_plot.plot_tx_powers(step_tx_powers)
+
+        while True:
+            print "game iteration %d" % (gameIterations + 1)
+            if gameIterations >= self.nr_game_iterations:
+                break
+            elif gameIterations%self.measuring_period == 0 and gameIterations > 5:
+                # perform channel mesurements
+                self.measureGains()
+            if self.checkPowerEvent():
+                gameIterations += 1
+                oldPlayerPowerEvent = copy.deepcopy(self.playerEvent)
+                self.resetLogicalDictionary(self.playerEvent, False)
+
+                for key in oldPlayerPowerEvent:
+                    if not oldPlayerPowerEvent[key]:
+                        if self.players[key].getNrPlayerIterations() > self.playerIterationsThreshold:
+                            self.players[key].updateTxPowerAsAverage()
+                            self.equilibrium[key] = True
+                        else:
+                            self.scaleCostForPlayer(key)
+                            self.playerEvent[key] = self.players[key].updateTxPower(self.playersCrtTxPovers,
+                                                                                    self.crossGains[key])
+                            # check if player has reached a stable state
+                            self.equilibrium[key] = self.players[key].isInEquilibrium()
+                        self.updatePlayersTxPowers(key, self.players[key].physicalLayer.getCrtTxPower())
+                    else:
+                        # check if player has reached a stable state
+                        self.equilibrium[key] = self.players[key].isInEquilibrium()
+
+                # if required create plot
+                if self.plot_results:
+                    for i in chei:
+                        step_tx_powers[i] = self.players[i].physicalLayer.getCrtTxPower()
+                    self.my_plot.plot_tx_powers(step_tx_powers)
+
+            self.writeStatToFile(gameIterations, stat_file_path)
