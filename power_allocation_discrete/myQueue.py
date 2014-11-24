@@ -16,14 +16,6 @@
 
 # Authors: Mihai Suciu
 #
-"""
-Created on Mar 18, 2014
-
-Based on: https://github.com/sensorlab/logatec-games/tree/master/Power_Allocation_Game
-
-@version: 2.0
-@author: mihai
-"""
 
 from collections import deque
 

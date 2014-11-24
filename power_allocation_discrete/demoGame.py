@@ -1,17 +1,36 @@
-"""
-Demo for the Dynamic (cost adaptive) power allocation game.
+# Copyright (C) 2014 SensorLab, Jozef Stefan Institute
+# http://sensorlab.ijs.si
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-A dynamic power allocation game is played between 4 players. Mapping between players and JSI VESNA nodes:
-- player 1: transmitter node - JSI Vesna node 51, receiver node  - JSI Vesna node 52
-- player 2: tx - node 56, rx - node 59
-- player 3: tx - node 54, rx - node 58
-- player 4: tx - node 57, rx - node 53
-"""
+# Authors: Mihai Suciu
+
+
 import gameNode
 from powerGame import PowerGame
 
 
 def main():
+	"""
+	Demo for the Dynamic (cost adaptive) power allocation game.
+	
+	A dynamic power allocation game is played between 4 players. Mapping between players and JSI VESNA nodes:
+	- player 1: transmitter node - JSI Vesna node 51, receiver node  - JSI Vesna node 52
+	- player 2: tx - node 56, rx - node 59
+	- player 3: tx - node 54, rx - node 58
+	- player 4: tx - node 57, rx - node 53
+	"""
     # define coordinator id
     coord_id = gameNode.JSI
     # consider plotting the results

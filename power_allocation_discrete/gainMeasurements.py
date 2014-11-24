@@ -17,14 +17,6 @@
 # Authors: Mihai Suciu
 #
 
-
-"""
-Contains several methods which can be used for channel gain measurements between VESNA nodes.
-
-@version: 1.4
-@author: mihai
-"""
-
 import time
 import math
 

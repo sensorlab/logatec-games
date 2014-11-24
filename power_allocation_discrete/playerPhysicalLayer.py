@@ -17,15 +17,6 @@
 # Authors: Mihai Suciu
 #
 
-"""
-Created on Apr 16, 2014
-
-Just an object to control transmissions and spectrum sensing.
-
-@version: 1.0
-@author: mihai
-"""
-
 import random
 import math
 

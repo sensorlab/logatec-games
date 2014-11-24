@@ -17,12 +17,6 @@
 # Authors: Mihai Suciu
 #
 
-"""
-Created on Apr 16, 2014
-
-@author: mihai
-"""
-
 import gameNode
 
 from powerGame import PowerGame
