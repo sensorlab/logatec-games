@@ -17,29 +17,29 @@
 # Authors: Mihai Suciu
 #
 
-'''
+"""
 Created on Mar 18, 2014
 
 Based on: https://github.com/sensorlab/logatec-games/tree/master/Power_Allocation_Game
 
 @version: 2.0
 @author: mihai
-'''
+"""
 
 class PlayerSenseLayer:
     """Responsible with transmission power allocation, i.e. spectrum sensing."""
 
-    
+
     def __init__(self, physicalLayerObjectForSenseLayer, gameType):
         """
         Sense layer constructor
-        
+
         Keyword arguments:
         gameType -- type of game played, i.e. how to compute the best response function
         """
         self.physicalLayer = physicalLayerObjectForSenseLayer
         self.gameType = gameType
-    
+
     def printPlayerSenseLayerInfo(self):
         """Just print some info"""
         print "Sense layer associated to player %d" % (self.physicalLayer.playerObject.playerNumber)

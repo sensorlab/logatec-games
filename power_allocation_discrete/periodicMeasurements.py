@@ -26,25 +26,25 @@ Perform periodic measurements between different players (direct and cross gain).
 """
 import datetime
 import time
-from games.myVersionOfPowerGame import gameNode
-from games.myVersionOfPowerGame.gameNode import GameNode
-from games.myVersionOfPowerGame.gainMeasurements import getDirectGainsNPl,\
+import gameNode
+from gameNode import GameNode
+from gainMeasurements import getDirectGainsNPl,\
     getCrossGains2Pl, measureGainBetwTxRx
-from games.myVersionOfPowerGame.utilStuff import writeSomeListToFile
+from utilStuff import writeSomeListToFile
 
 def main():
     # perform measurements in 5 minute interval until 16:00
     nodesUsed = [51,52,56,59]
     coordId = gameNode.JSI
-    
+
     # create list of node objects
     vesnaNodes = [GameNode(coordId,ids) for ids in nodesUsed]
     crtDate = datetime.datetime.now()
     filePath = "./results/coor_%d/longTermMeas_%s_exp_%d-%d-%d_%d-%d-%d.dat" % (coordId, ''.join([str(x) for x in nodesUsed]), crtDate.day, crtDate.month, crtDate.year, crtDate.hour, crtDate.minute, crtDate.second)
     #perform gain measurements, at 5 minute intervals, between two players for 4 hours.
-    #player 1 - 51->52, player 2 - 56->59 
+    #player 1 - 51->52, player 2 - 56->59
     performMeasurements(coordId,vesnaNodes, crtDate.hour+4, crtDate.minute, filePath)
-    
+
 def performMeasurements(coordonatorId, nodeObjUsed, stopHour, stopMinute, filePath):
     a = 0
     while True:

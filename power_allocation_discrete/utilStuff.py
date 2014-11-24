@@ -17,21 +17,22 @@
 # Authors: Mihai Suciu
 #
 
-'''
+"""
 Created on Apr 21, 2014
 
 Module containing some utility functions.
 
 @author: mihai
-'''
+"""
 
 import os
 import datetime
 
+
 def writeListToFile(filePath, listToWrite):
     """
     Write the values of a list to a file.
-    
+
     Keyword arguments:
     filePath -- Statistics file path.
     listToWrite -- list containing values that will be added to the file
@@ -40,17 +41,18 @@ def writeListToFile(filePath, listToWrite):
         # if the file doesn't exits, then create it
         f = open(filePath, "w")
         f.close()
-    
+
     stringToWrite = '\t'.join([str(x) for x in listToWrite])
-    
+
     with open(filePath, 'a') as myFile:
         myFile.write(stringToWrite)
         myFile.write("\n")
 
+
 def writeSomeListToFile(coordId, filePath, listToWrite):
     """
-    Create directories to store result and write the values of a list to a file. 
-    
+    Create directories to store result and write the values of a list to a file.
+
     Keyword arguments:
     coordId -- Id for coordinator node
     filePath -- Statistics file path.
@@ -73,15 +75,16 @@ def writeSomeListToFile(coordId, filePath, listToWrite):
         myFile.write(stringToWrite)
         myFile.write("\n")
 
+
 def getFilePathWithDate(coordId, gameType, multiRun=False):
     """
     Get file path for statistics, add date and time to differentiate between different experiments.
     Do this here because the experiment may take a few minutes and I do not want the name to change.
-    
+
     Keyword arguments:
     coordId -- numerical id for cluster coordinator.
     gameType -- numerical id for game played.
-    multiRun -- if True then the game will be played for multiple times.    
+    multiRun -- if True then the game will be played for multiple times.
     """
     try:
         os.mkdir("./results")
@@ -95,13 +98,12 @@ def getFilePathWithDate(coordId, gameType, multiRun=False):
         os.mkdir("./results/coor_%d/gameType_%d" % (coordId, gameType))
     except OSError:
         pass
-    
+
     crtDate = datetime.datetime.now()
     name = "exp_"
     if multiRun:
         name = "multiRunExp_"
     fileName = name + "exp_%d-%d-%d_%d-%d-%d.dat" % (crtDate.day, crtDate.month, crtDate.year, crtDate.hour, crtDate.minute, crtDate.second)
     filePath = "./results/coor_%d/gameType_%d/%s" % (coordId, gameType, fileName)
-    
-    return filePath
 
+    return filePath
