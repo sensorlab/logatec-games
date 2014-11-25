@@ -17,14 +17,6 @@
 # Authors: Mihai Suciu
 #
 
-"""
-Created on Apr 21, 2014
-
-Module containing some utility functions.
-
-@author: mihai
-"""
-
 import os
 import datetime
 

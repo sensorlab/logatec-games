@@ -17,13 +17,6 @@
 # Authors: Mihai Suciu
 #
 
-"""
-Created on May 7, 2014
-
-Perform periodic measurements between different players (direct and cross gain).
-
-@author: Mihai
-"""
 import datetime
 import time
 import gameNode

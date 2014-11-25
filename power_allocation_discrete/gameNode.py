@@ -17,16 +17,6 @@
 # Authors: Mihai Suciu
 #
 
-"""
-Created on Mar 12, 2014
-
-Configuring VESNA nodes for generating signal, and spectrum sensing. Class has helper methods used for testing nodes.
-Based on: https://github.com/sensorlab/logatec-games/tree/master/Power_Allocation_Game
-
-@version: 2.0
-@author: mihai
-"""
-
 import logging
 import time
 import os

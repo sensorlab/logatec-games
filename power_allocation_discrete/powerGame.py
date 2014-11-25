@@ -17,22 +17,6 @@
 # Authors: Mihai Suciu
 #
 
-"""
-Created on Mar 18, 2014
-
-Power allocation game implementation for LOG-a-TEC testbed.
-
-Game type:
-1 - game step for experiment 3
-2 -
-3 - multiple run experiments, measure sum(h_ji*p_j)+n_0 individually
-4 - multiple run experiments, measure sum(h_ji*p_j)+n_0 when all opponents transmit
-5 - dynamic game, i.e. players come and go
-6 - run the game for a number of iterations, perform channel measurements at specified periods
-@version: 2.0
-@author: mihai
-"""
-
 import time
 import random
 import copy
@@ -48,9 +32,17 @@ from utilStuff import writeListToFile, getFilePathWithDate
 
 class PowerGame():
     """
-    Power allocation game implementation.
-    """
+	Power allocation game implementation for LOG-a-TEC testbed.
 
+	Game type:
+	1 - game step for experiment 3
+	2 -
+	3 - multiple run experiments, measure sum(h_ji*p_j)+n_0 individually
+	4 - multiple run experiments, measure sum(h_ji*p_j)+n_0 when all opponents transmit
+	5 - dynamic game, i.e. players come and go
+	6 - run the game for a number of iterations, perform channel measurements at specified periods
+	"""
+    
     # number of game iterations
     nr_game_iterations = 1
     # define period, in game iterations, for channel measurements
