@@ -32,15 +32,19 @@ def checkConvergence(h11, h12, h21, h22):
     #h11 and h22 direct gains, linear values
     #h12 and h21 cross gains : hcross = hji
     #check if hji/hii > 1/M where j!=i
+    print "\x1b[1;31m"
     if ( (h21 / h11 ) >= (1/2.00) ):
         print "System is not convergent: h21/h11 = %.3f" %(h21/h11)
+        print "\x1b[0m"
         return False
     
     if ( (h12/h22) >= (1/2.00)):
         print "System is not convergent: h12/22 = %.3f" %(h12/h22)
+        print "\x1b[0m"
         return False
         
     print "System is convergent: h21/h11 = %.3f    and       h12/22 = %.3f\n" %(h21/h11, h12/h22)
+    print "\x1b[0m"
     return True
     
 
@@ -55,14 +59,14 @@ def main():
         player2.setNeighborPlayer(player1)
         
         #update gains
-        #player1.measureGains()
-        #player2.measureGains()
+        player1.measureGains()
+        player2.measureGains()
         
-        player1.setDirectGain(GainCalculations.getAverageGain(player1.coordinator_id, player1.tx_node.node_id, player1.rx_node.node_id, year=2013, month=8, day=23))
-        player1.setCrossGain(GainCalculations.getAverageGain(player1.coordinator_id, player2.tx_node.node_id, player1.rx_node.node_id, year=2013, month=8, day=23))
+	#player1.setDirectGain(GainCalculations.getAverageGain(player1.coordinator_id, player1.tx_node.node_id, player1.rx_node.node_id, year=2013, month=8, day=23))
+	#player1.setCrossGain(GainCalculations.getAverageGain(player1.coordinator_id, player2.tx_node.node_id, player1.rx_node.node_id, year=2013, month=8, day=23))
         
-        player2.setDirectGain(GainCalculations.getAverageGain(player2.coordinator_id, player2.tx_node.node_id, player2.rx_node.node_id, year=2013, month=8, day=23))
-        player2.setCrossGain(GainCalculations.getAverageGain(player2.coordinator_id, player1.tx_node.node_id, player2.rx_node.node_id, year=2013, month=8, day=23))       
+	#player2.setDirectGain(GainCalculations.getAverageGain(player2.coordinator_id, player2.tx_node.node_id, player2.rx_node.node_id, year=2013, month=8, day=23))
+	#player2.setCrossGain(GainCalculations.getAverageGain(player2.coordinator_id, player1.tx_node.node_id, player2.rx_node.node_id, year=2013, month=8, day=23))       
         
         #if you want to see some info about players
         player1.printPlayerInfo()
