@@ -11,6 +11,8 @@ Before using this package, please install VESNA ALH Tools and Python bindings fo
 * 2) **Installation of Python bindings for VESNA spectrum application** 
 (see its own README file for installation instructions - _Tomaz Solc_ )
 * https://github.com/sensorlab/vesna-spectrum-sensor
+* 3) **pykalman, the dead-simple Kalman Filter, Kalman Smoother, and EM library for Python**
+* https://github.com/pykalman/pykalman
 
 **This package contains the following Python classes:**
 * **Node** - used for setting the nodes as transmitters or receivers
